@@ -205,6 +205,16 @@ namespace TiltedPhoques
         // which already copies frames on the CPU.
         aCommandLine->AppendSwitch("disable-gpu");
         aCommandLine->AppendSwitch("disable-gpu-compositing");
+
+        // Linux/Proton fix: o overlay carrega HTML LOCAL (UI/index.html), então não
+        // precisa da stack de rede do Chromium. Sob Wine, o NetworkChangeNotifier
+        // do Windows falha (WSALookupServiceBegin failed: 8, visível no
+        // cef_debug.log) e o CefInitialize morre com int3 (0x80000003). Desligar a
+        // rede evita o subsistema problemático. No Windows é inócuo para um overlay
+        // que só serve conteúdo local.
+        aCommandLine->AppendSwitch("disable-features=NetworkService");
+        aCommandLine->AppendSwitch("disable-background-networking");
+        aCommandLine->AppendSwitch("disable-networking");
     }
 
     std::wstring OverlayApp::GetCefCachePath(const std::filesystem::path& currentPath) const noexcept

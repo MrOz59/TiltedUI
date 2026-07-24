@@ -28,6 +28,7 @@ namespace TiltedPhoques
         TP_NOCOPYMOVE(OverlayApp);
 
         bool Initialize() noexcept;
+        void Update() noexcept; // bombeia o loop do CEF (external_message_pump)
         void Shutdown() noexcept;
 
         void ExecuteAsync(const std::string& acFunction, const CefRefPtr<CefListValue>& apArguments = nullptr) const noexcept;

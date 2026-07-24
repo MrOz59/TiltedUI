@@ -60,7 +60,13 @@ namespace TiltedPhoques
 
         CefSettings settings;
         settings.no_sandbox = true;
-        settings.multi_threaded_message_loop = true;
+        // Linux/Proton: com multi_threaded_message_loop=true o CefInitialize sobe a
+        // thread de UI do Chromium, que bate um CHECK (int3, 0x80000003) sob Wine
+        // dentro do próprio CefInitialize. Usamos o bombeamento externo do loop:
+        // CefDoMessageLoopWork é chamado a cada frame (ver OverlayApp::Update, dirigido
+        // por OverlayService::Render). No Windows os dois modos funcionam.
+        settings.multi_threaded_message_loop = false;
+        settings.external_message_pump = true;
         settings.windowless_rendering_enabled = true;
 
         settings.log_severity = LOGSEVERITY_WARNING;
@@ -101,6 +107,14 @@ namespace TiltedPhoques
         CefDiag("[cef] CreateBrowser returned");
 
         return ret;
+    }
+
+    void OverlayApp::Update() noexcept
+    {
+        // Bombeia o loop do CEF quando external_message_pump está ativo. Chamado a
+        // cada frame; no modo multi-thread (Windows) seria no-op, mas ali não
+        // registramos external_message_pump, então CefDoMessageLoopWork não é usado.
+        CefDoMessageLoopWork();
     }
 
     void OverlayApp::Shutdown() noexcept
@@ -205,16 +219,6 @@ namespace TiltedPhoques
         // which already copies frames on the CPU.
         aCommandLine->AppendSwitch("disable-gpu");
         aCommandLine->AppendSwitch("disable-gpu-compositing");
-
-        // Linux/Proton fix: o overlay carrega HTML LOCAL (UI/index.html), então não
-        // precisa da stack de rede do Chromium. Sob Wine, o NetworkChangeNotifier
-        // do Windows falha (WSALookupServiceBegin failed: 8, visível no
-        // cef_debug.log) e o CefInitialize morre com int3 (0x80000003). Desligar a
-        // rede evita o subsistema problemático. No Windows é inócuo para um overlay
-        // que só serve conteúdo local.
-        aCommandLine->AppendSwitch("disable-features=NetworkService");
-        aCommandLine->AppendSwitch("disable-background-networking");
-        aCommandLine->AppendSwitch("disable-networking");
     }
 
     std::wstring OverlayApp::GetCefCachePath(const std::filesystem::path& currentPath) const noexcept

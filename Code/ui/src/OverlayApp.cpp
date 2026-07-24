@@ -49,13 +49,12 @@ namespace TiltedPhoques
         settings.windowless_rendering_enabled = true;
         CefDiag("[cef] after CefSettings");
 
-        // TODO(cosideci): properly check debug mode for releasedbg
-//#ifdef DEBUG
-        settings.log_severity = LOGSEVERITY_VERBOSE;
-        settings.remote_debugging_port = 8384;
-//#else
-        //settings.log_severity = LOGSEVERITY_VERBOSE;
-//#endif
+        // Linux/Proton: remote_debugging_port abre um socket TCP e o log verbose
+        // toca subsistemas extras do Chromium; ambos são candidatos a falhar cedo
+        // sob Wine. Desligados enquanto diagnosticamos o int3 na init do CEF.
+        settings.log_severity = LOGSEVERITY_WARNING;
+        // settings.remote_debugging_port = 8384;
+        CefDiag("[cef] after log/debug settings");
 
         // Only the first instance will use real CEF cache, extra instances' caches go in
         // %TEMP% (see `root_cache_path` docs)

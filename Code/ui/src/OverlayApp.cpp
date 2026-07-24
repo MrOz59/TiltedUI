@@ -36,6 +36,22 @@ namespace TiltedPhoques
         return TiltedPhoques::GetPath();
     }
 
+    // Diagnóstico temporário (Proton): marca com fsync no dir de recursos correto.
+    static void CefDiag(const char* apMsg)
+    {
+        const auto p = (GetOverlayResourceDir() / "logs" / "st_cef_diag.log").wstring();
+        HANDLE h = CreateFileW(p.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (h != INVALID_HANDLE_VALUE)
+        {
+            char line[128];
+            const int n = _snprintf(line, sizeof(line), "%s\r\n", apMsg);
+            DWORD w = 0;
+            WriteFile(h, line, n > 0 ? (DWORD)n : 0, &w, nullptr);
+            FlushFileBuffers(h);
+            CloseHandle(h);
+        }
+    }
+
     bool OverlayApp::Initialize() noexcept
     {
         CefMainArgs args(GetModuleHandleW(nullptr));
@@ -62,8 +78,13 @@ namespace TiltedPhoques
         CefString(&settings.locales_dir_path).FromWString(currentPath / L"locales");
         CefString(&settings.browser_subprocess_path).FromWString(currentPath / m_processName);
 
+        CefDiag("[cef] paths set, calling CefInitialize");
         if (!CefInitialize(args, settings, this, nullptr))
+        {
+            CefDiag("[cef] CefInitialize returned FALSE");
             return false;
+        }
+        CefDiag("[cef] CefInitialize OK");
 
         if (!m_pClient)
             m_pClient = new OverlayClient(m_pRenderProvider->Create());
@@ -74,8 +95,10 @@ namespace TiltedPhoques
         CefWindowInfo info;
         info.SetAsWindowless(m_pRenderProvider->GetWindow());
 
+        CefDiag("[cef] before CreateBrowser");
         const auto ret = CefBrowserHost::CreateBrowser(info, m_pClient.get(),
             (currentPath / L"UI" / L"index.html").wstring(), browserSettings, nullptr, nullptr);
+        CefDiag("[cef] CreateBrowser returned");
 
         return ret;
     }

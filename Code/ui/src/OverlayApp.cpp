@@ -69,7 +69,9 @@ namespace TiltedPhoques
         settings.external_message_pump = true;
         settings.windowless_rendering_enabled = true;
 
-        settings.log_severity = LOGSEVERITY_WARNING;
+        // Diagnóstico: INFO captura FATAL/CHECK do Chromium no cef_debug.log (o
+        // int3 vem de dentro da libcef, provado pelo vectored handler).
+        settings.log_severity = LOGSEVERITY_INFO;
         // settings.remote_debugging_port = 8384;
 
         // Only the first instance will use real CEF cache, extra instances' caches go in
@@ -219,6 +221,11 @@ namespace TiltedPhoques
         // which already copies frames on the CPU.
         aCommandLine->AppendSwitch("disable-gpu");
         aCommandLine->AppendSwitch("disable-gpu-compositing");
+
+        // Diagnóstico: força o Chromium a escrever logs (inclui a mensagem do CHECK
+        // que precede o int3 dentro da libcef).
+        aCommandLine->AppendSwitch("enable-logging");
+        aCommandLine->AppendSwitchWithValue("v", "1");
     }
 
     std::wstring OverlayApp::GetCefCachePath(const std::filesystem::path& currentPath) const noexcept

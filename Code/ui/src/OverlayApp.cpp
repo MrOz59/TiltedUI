@@ -1,5 +1,6 @@
 #include <OverlayApp.hpp>
 #include <iostream>
+#include <cstring>
 #include <TiltedCore/Filesystem.hpp>
 
 namespace TiltedPhoques
@@ -45,8 +46,23 @@ namespace TiltedPhoques
         CefString(&settings.locales_dir_path).FromWString(currentPath / L"locales");
         CefString(&settings.browser_subprocess_path).FromWString(currentPath / m_processName);
 
+        // Diagnóstico Linux/Proton: marca antes/depois do CefInitialize. Grava com
+        // fsync ao lado do módulo para sobreviver a um int3 (0x80000003) do
+        // Chromium, que ocorre antes de o próprio cef_debug.log ser aberto.
+        {
+            const auto p = (TiltedPhoques::GetPath() / "logs" / "st_cef_diag.log").wstring();
+            HANDLE h = CreateFileW(p.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+            if (h != INVALID_HANDLE_VALUE) { const char* m = "[cef] before CefInitialize\r\n"; DWORD w=0; WriteFile(h,m,(DWORD)strlen(m),&w,nullptr); FlushFileBuffers(h); CloseHandle(h); }
+        }
+
         if (!CefInitialize(args, settings, this, nullptr))
             return false;
+
+        {
+            const auto p = (TiltedPhoques::GetPath() / "logs" / "st_cef_diag.log").wstring();
+            HANDLE h = CreateFileW(p.c_str(), FILE_APPEND_DATA, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+            if (h != INVALID_HANDLE_VALUE) { const char* m = "[cef] CefInitialize OK, before CreateBrowser\r\n"; DWORD w=0; WriteFile(h,m,(DWORD)strlen(m),&w,nullptr); FlushFileBuffers(h); CloseHandle(h); }
+        }
 
         if (!m_pClient)
             m_pClient = new OverlayClient(m_pRenderProvider->Create());

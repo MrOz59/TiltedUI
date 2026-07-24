@@ -155,6 +155,16 @@ namespace TiltedPhoques
     {
         aCommandLine->AppendSwitch("allow-file-access-from-files");
         aCommandLine->AppendSwitch("allow-universal-access-from-files");
+
+        // Linux/Proton fix: the overlay renders through the CPU OnPaint path
+        // (see OverlayRenderHandlerD3D11), so the Chromium GPU process is not
+        // needed. Under Wine/Proton, initializing the GPU pipeline (ANGLE -> D3D)
+        // crashes libcef.dll inside D3DCompiler_47 while compiling shaders.
+        // Disabling GPU/compositing routes CEF straight to OnPaint from the
+        // compositor and avoids the crash. On Windows this is a no-op for OSR,
+        // which already copies frames on the CPU.
+        aCommandLine->AppendSwitch("disable-gpu");
+        aCommandLine->AppendSwitch("disable-gpu-compositing");
     }
 
     std::wstring OverlayApp::GetCefCachePath(const std::filesystem::path& currentPath) const noexcept

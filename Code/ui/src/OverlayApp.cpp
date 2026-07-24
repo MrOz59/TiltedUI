@@ -226,6 +226,13 @@ namespace TiltedPhoques
         // que precede o int3 dentro da libcef).
         aCommandLine->AppendSwitch("enable-logging");
         aCommandLine->AppendSwitchWithValue("v", "1");
+
+        // Linux/Proton: o int3 (0x80000003) é num thread interno do Chromium
+        // (diferente do que loga o WSALookupServiceBegin) dentro do CefInitialize.
+        // --single-process colapsa os processos/threads auxiliares no principal,
+        // evitando o subsistema que bate o CHECK sob Wine. É um modo suportado pelo
+        // CEF para OSR e reduz drasticamente a superfície de threading.
+        aCommandLine->AppendSwitch("single-process");
     }
 
     std::wstring OverlayApp::GetCefCachePath(const std::filesystem::path& currentPath) const noexcept
